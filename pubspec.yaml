@@ -3,10 +3,23 @@ description: A continuous Flutter calendar map with pinch navigation, a date pic
 version: 0.1.0
 repository: https://github.com/AktanK13/Calendar_DatePicker
 issue_tracker: https://github.com/AktanK13/Calendar_DatePicker/issues
-publish_to: none
 environment:
   sdk: '>=3.11.0 <4.0.0'
   flutter: '>=3.41.0'
 dependencies:
   flutter:
     sdk: flutter
+topics:
+  - calendar
+  - date-picker
+  - widgets
+  - animation
+screenshots:
+  - description: Month selection in the light theme
+    path: doc/screenshots/month-light.png
+  - description: Month selection in the dark theme
+    path: doc/screenshots/month-dark.png
+  - description: Twelve months inside one year
+    path: doc/screenshots/year-light.png
+  - description: Nine-year overview with the current year centered
+    path: doc/screenshots/overview-light.png

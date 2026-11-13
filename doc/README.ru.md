@@ -19,9 +19,9 @@ Calendar DatePicker — выбор одной даты в виде карты в
 - Пример предназначен для iOS. Работа на физическом устройстве и Android требует отдельной проверки.
 - Используется только Flutter SDK; `cupertino_icons` нужен примеру, а не самой библиотеке.
 
-Версия исходников — `0.1.0`. Подключение из локальной копии описано ниже.
+Версия библиотеки — `0.1.0`. Лицензия — [MIT](../LICENSE).
 
-## 3. Подключение до публикации
+## 3. Подключение
 
 В `pubspec.yaml` приложения:
 
@@ -29,11 +29,10 @@ Calendar DatePicker — выбор одной даты в виде карты в
 dependencies:
   flutter:
     sdk: flutter
-  calendar_date_picker:
-    path: ../Calendar_DatePicker
+  calendar_date_picker: ^0.1.0
 ```
 
-Путь считается относительно приложения. Выполните `flutter pub get`, затем импортируйте:
+Выполните `flutter pub get`, затем импортируйте:
 
 ```dart
 import 'package:calendar_date_picker/calendar_date_picker.dart';

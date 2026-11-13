@@ -1,6 +1,6 @@
 ## 0.1.0
 
-Unreleased development version.
+Initial release.
 
 - Add a continuous calendar map with month, year and nine-year camera levels.
 - Center the system current year in its 3×3 overview independently of the range start.

@@ -2,9 +2,19 @@
 
 A Flutter date picker that feels like navigating a map: pinch from a month to its year, then to a square of nine years. All dates share **one continuous coordinate system**—zoom changes the camera, not the screen.
 
-[Подробное руководство на русском](docs/README.ru.md) · [API reference](docs/api.md) · [GitHub](https://github.com/AktanK13/Calendar_DatePicker)
+[Подробное руководство на русском](doc/README.ru.md) · [API reference](doc/api.md) · [GitHub](https://github.com/AktanK13/Calendar_DatePicker)
 
-> Version 0.1.0 is available as source. Installation from a local checkout is shown below.
+## Preview
+
+All screenshots show the same continuous canvas at different scales.
+
+| Light month | Dark month |
+| --- | --- |
+| <img src="doc/screenshots/month-light.png" width="280" alt="Date selection in the light theme"> | <img src="doc/screenshots/month-dark.png" width="280" alt="Date selection in the dark theme"> |
+
+| Year | Nine years |
+| --- | --- |
+| <img src="doc/screenshots/year-light.png" width="280" alt="Twelve months inside one year"> | <img src="doc/screenshots/overview-light.png" width="280" alt="Current year centered in the nine-year overview"> |
 
 ## Is this the right picker for your app?
 
@@ -33,14 +43,13 @@ The example targets iOS and has been run on iPhone 16 Pro Max Simulator / iOS 18
 
 ## Installation
 
-Before publication, point to your checkout:
+Add the package to your app:
 
 ```yaml
 dependencies:
   flutter:
     sdk: flutter
-  calendar_date_picker:
-    path: ../Calendar_DatePicker
+  calendar_date_picker: ^0.1.0
 ```
 
 ```sh
@@ -49,7 +58,7 @@ flutter pub get
 
 Source repository: [AktanK13/Calendar_DatePicker](https://github.com/AktanK13/Calendar_DatePicker).
 
-All examples below use the current local import:
+Import the library:
 
 ```dart
 import 'package:calendar_date_picker/calendar_date_picker.dart';
@@ -271,7 +280,7 @@ There is no external selection/camera controller on `CalendarMapDatePicker` yet.
 
 ## API and example
 
-See [the complete parameter tables and utility API](docs/api.md).
+See [the complete parameter tables and utility API](doc/api.md).
 
 ```sh
 cd example
@@ -290,3 +299,7 @@ The example has a Cupertino host screen, light/dark/system appearance, and a but
 - No automatic midnight refresh without another frame; the layout-year anchor is fixed for the app run.
 - No guarantee of stable 60/120 FPS from debug-simulator measurements. Profile on target hardware.
 - No completed physical-device or full VoiceOver/TalkBack validation.
+
+## License
+
+[MIT](LICENSE) © 2026 AktanK13.
