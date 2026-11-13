@@ -1,3 +1,7 @@
+## 0.1.2
+
+- Remove the extra dot shown below today when today is selected.
+
 ## 0.1.1
 
 - Use absolute screenshot and documentation links for pub.dev README rendering.

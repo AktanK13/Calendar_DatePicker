@@ -178,13 +178,6 @@ class CalendarMapPainter extends CustomPainter {
                   ..style = chosen ? PaintingStyle.fill : PaintingStyle.stroke
                   ..strokeWidth = 1.5,
               );
-              // Today retains an additional dot even when selected.
-              if (now && chosen)
-                canvas.drawCircle(
-                  cell.center + const Offset(0, 11),
-                  2,
-                  Paint()..color = theme.text.withValues(alpha: dayOpacity),
-                );
             }
             if (current && CalendarDates.same(d, focused)) {
               canvas.drawRRect(
