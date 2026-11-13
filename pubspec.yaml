@@ -1,6 +1,6 @@
 name: calendar_date_picker
 description: A continuous Flutter calendar map with pinch navigation, a date picker dialog, light and dark themes, and configurable date limits.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/AktanK13/Calendar_DatePicker
 issue_tracker: https://github.com/AktanK13/Calendar_DatePicker/issues
 environment:

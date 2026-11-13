@@ -2,7 +2,7 @@
 
 A Flutter date picker that feels like navigating a map: pinch from a month to its year, then to a square of nine years. All dates share **one continuous coordinate system**—zoom changes the camera, not the screen.
 
-[Подробное руководство на русском](doc/README.ru.md) · [API reference](doc/api.md) · [GitHub](https://github.com/AktanK13/Calendar_DatePicker)
+[Подробное руководство на русском](https://github.com/AktanK13/Calendar_DatePicker/blob/main/doc/README.ru.md) · [API reference](https://github.com/AktanK13/Calendar_DatePicker/blob/main/doc/api.md) · [GitHub](https://github.com/AktanK13/Calendar_DatePicker)
 
 ## Preview
 
@@ -10,11 +10,11 @@ All screenshots show the same continuous canvas at different scales.
 
 | Light month | Dark month |
 | --- | --- |
-| <img src="doc/screenshots/month-light.png" width="280" alt="Date selection in the light theme"> | <img src="doc/screenshots/month-dark.png" width="280" alt="Date selection in the dark theme"> |
+| <img src="https://raw.githubusercontent.com/AktanK13/Calendar_DatePicker/main/doc/screenshots/month-light.png" width="280" alt="Date selection in the light theme"> | <img src="https://raw.githubusercontent.com/AktanK13/Calendar_DatePicker/main/doc/screenshots/month-dark.png" width="280" alt="Date selection in the dark theme"> |
 
 | Year | Nine years |
 | --- | --- |
-| <img src="doc/screenshots/year-light.png" width="280" alt="Twelve months inside one year"> | <img src="doc/screenshots/overview-light.png" width="280" alt="Current year centered in the nine-year overview"> |
+| <img src="https://raw.githubusercontent.com/AktanK13/Calendar_DatePicker/main/doc/screenshots/year-light.png" width="280" alt="Twelve months inside one year"> | <img src="https://raw.githubusercontent.com/AktanK13/Calendar_DatePicker/main/doc/screenshots/overview-light.png" width="280" alt="Current year centered in the nine-year overview"> |
 
 ## Is this the right picker for your app?
 
@@ -49,7 +49,7 @@ Add the package to your app:
 dependencies:
   flutter:
     sdk: flutter
-  calendar_date_picker: ^0.1.0
+  calendar_date_picker: ^0.1.1
 ```
 
 ```sh
@@ -227,7 +227,7 @@ CupertinoApp(
 )
 ```
 
-`YourCupertinoScreen` is your app's widget. For automatic system-mode changes and matching accent colors, follow [example/lib/main.dart](example/lib/main.dart). This bridge does not make the picker a native UIKit dialog.
+`YourCupertinoScreen` is your app's widget. For automatic system-mode changes and matching accent colors, follow [example/lib/main.dart](https://github.com/AktanK13/Calendar_DatePicker/blob/main/example/lib/main.dart). This bridge does not make the picker a native UIKit dialog.
 
 ## Locale and first weekday
 
@@ -280,7 +280,7 @@ There is no external selection/camera controller on `CalendarMapDatePicker` yet.
 
 ## API and example
 
-See [the complete parameter tables and utility API](doc/api.md).
+See [the complete parameter tables and utility API](https://github.com/AktanK13/Calendar_DatePicker/blob/main/doc/api.md).
 
 ```sh
 cd example
@@ -302,4 +302,4 @@ The example has a Cupertino host screen, light/dark/system appearance, and a but
 
 ## License
 
-[MIT](LICENSE) © 2026 AktanK13.
+[MIT](https://github.com/AktanK13/Calendar_DatePicker/blob/main/LICENSE) © 2026 AktanK13.

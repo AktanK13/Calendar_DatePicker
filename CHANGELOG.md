@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Use absolute screenshot and documentation links for pub.dev README rendering.
+- No changes to the date picker API or behavior.
+
 ## 0.1.0
 
 Initial release.
