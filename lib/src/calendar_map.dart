@@ -35,6 +35,8 @@ class CalendarMapDatePicker extends StatefulWidget {
     this.labels,
     this.firstDayOfWeek = DateTime.monday,
     this.snapOnPinchEnd = true,
+    this.showZoomControls = true,
+    this.showZoomHint = true,
     this.animationDuration = const Duration(milliseconds: 260),
     this.animationCurve = const Cubic(.23, 1, .32, 1),
   }) {
@@ -86,6 +88,13 @@ class CalendarMapDatePicker extends StatefulWidget {
   /// Set false for fully free pinch zoom without settling to a territory.
   final bool snapOnPinchEnd;
 
+  /// Whether the visible +/− controls are shown. Pinch zoom remains enabled.
+  final bool showZoomControls;
+
+  /// Plays one subtle zoom-out/zoom-in hint after the initial month appears.
+  /// The hint is skipped when reduced motion is enabled and stops on input.
+  final bool showZoomHint;
+
   /// Settling duration. Reduced motion and keyboard navigation bypass it.
   final Duration animationDuration;
 
@@ -114,6 +123,10 @@ class _CalendarMapDatePickerState extends State<CalendarMapDatePicker>
   DateTime? _selected;
   Size? _viewport;
   bool _gestureActive = false, _gestureHadZoom = false, _gestureHadPan = false;
+  bool _hintScheduled = false;
+  int _hintPhase = 0;
+  double _hintReturnScale = 1;
+  Offset _hintReturnTranslation = Offset.zero;
   Offset _panStart = Offset.zero;
   Offset _snapWorld = Offset.zero;
   final _pointers = <int>{};
@@ -150,11 +163,48 @@ class _CalendarMapDatePickerState extends State<CalendarMapDatePicker>
           })
           ..addStatusListener((status) {
             if (status == AnimationStatus.completed) {
+              if (_hintPhase == 1) {
+                _hintPhase = 2;
+                _animation.duration = const Duration(milliseconds: 150);
+                _move(_hintReturnScale, _hintReturnTranslation);
+                return;
+              }
+              if (_hintPhase == 2) {
+                _hintPhase = 0;
+                _animation.duration = widget.animationDuration;
+              }
               _transitioning = false;
               _applyBounds();
               if (mounted) setState(() {});
             }
           });
+  }
+
+  void _cancelHint() {
+    if (_hintPhase == 0) return;
+    _hintPhase = 0;
+    _animation.duration = widget.animationDuration;
+  }
+
+  void _scheduleZoomHint() {
+    if (_hintScheduled || !widget.showZoomHint) return;
+    _hintScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          _viewport == null ||
+          MediaQuery.disableAnimationsOf(context) ||
+          _navigation.level != CalendarLevel.month) {
+        return;
+      }
+      final rect = _navigation.target;
+      final center = _viewport!.center(Offset.zero);
+      _hintReturnScale = _camera.scale;
+      _hintReturnTranslation = _camera.translation;
+      final hintScale = _camera.scale * .92;
+      _hintPhase = 1;
+      _animation.duration = const Duration(milliseconds: 110);
+      _move(hintScale, center - rect.center * hintScale);
+    });
   }
 
   void _applyBounds() {
@@ -368,6 +418,7 @@ class _CalendarMapDatePickerState extends State<CalendarMapDatePicker>
         final rect = _navigation.target;
         final scale = CalendarCamera.fitScale(rect, size);
         _camera.setView(scale, size.center(Offset.zero) - rect.center * scale);
+        _scheduleZoomHint();
       } else if (_viewport != size) {
         _animation.stop();
         _transitioning = false;
@@ -395,6 +446,7 @@ class _CalendarMapDatePickerState extends State<CalendarMapDatePicker>
                   child: Listener(
                     onPointerDown: (event) {
                       _animation.stop();
+                      _cancelHint();
                       _pointers.add(event.pointer);
                     },
                     onPointerUp: (event) {
@@ -501,68 +553,68 @@ class _CalendarMapDatePickerState extends State<CalendarMapDatePicker>
               ),
             ),
             Positioned(
-              top: 12,
-              left: landscape ? mapWidth : 16,
-              right: 12,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.background,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Flex(
-                    direction: landscape ? Axis.vertical : Axis.horizontal,
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Flexible(
-                        flex: landscape ? 0 : 1,
-                        fit: landscape ? FlexFit.loose : FlexFit.tight,
-                        child: IgnorePointer(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _labels.map,
-                                style: TextStyle(
-                                  color: theme.text,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
+                top: 12,
+                left: landscape ? mapWidth : 16,
+                right: 12,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Flex(
+                      direction: landscape ? Axis.vertical : Axis.horizontal,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Flexible(
+                          flex: landscape ? 0 : 1,
+                          fit: landscape ? FlexFit.loose : FlexFit.tight,
+                          child: IgnorePointer(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _labels.map,
+                                  style: TextStyle(
+                                    color: theme.text,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '${_navigation.year} · ${_navigation.level == CalendarLevel.month
-                                    ? _labels.months[_navigation.month - 1]
-                                    : _navigation.level == CalendarLevel.year
-                                    ? (_labels == CalendarMapLabels.ru ? 'Год' : 'Year')
-                                    : '3 × 3'}',
-                                style: TextStyle(
-                                  color: theme.secondary,
-                                  fontSize: 12,
+                                Text(
+                                  '${_navigation.year} · ${_navigation.level == CalendarLevel.month
+                                      ? _labels.months[_navigation.month - 1]
+                                      : _navigation.level == CalendarLevel.year
+                                      ? (_labels == CalendarMapLabels.ru ? 'Год' : 'Year')
+                                      : '3 × 3'}',
+                                  style: TextStyle(
+                                    color: theme.secondary,
+                                    fontSize: 12,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () => _showDate(
-                          CalendarSelection(
-                            firstYear: widget.firstYear,
-                            lastYear: widget.lastYear,
-                          ).clamp(DateTime.now()),
+                        TextButton(
+                          onPressed: () => _showDate(
+                            CalendarSelection(
+                              firstYear: widget.firstYear,
+                              lastYear: widget.lastYear,
+                            ).clamp(DateTime.now()),
+                          ),
+                          child: Text(
+                            _labels.today,
+                            style: TextStyle(color: theme.accent),
+                          ),
                         ),
-                        child: Text(
-                          _labels.today,
-                          style: TextStyle(color: theme.accent),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
             Positioned(
               bottom: landscape ? 76 : 20,
               left: landscape ? mapWidth : 16,
@@ -600,30 +652,31 @@ class _CalendarMapDatePickerState extends State<CalendarMapDatePicker>
                 ),
               ),
             ),
-            Positioned(
-              bottom: 12,
-              right: 12,
-              child: Material(
-                color: theme.territory,
-                borderRadius: BorderRadius.circular(16),
-                child: Flex(
-                  direction: landscape ? Axis.horizontal : Axis.vertical,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: _labels.zoomIn,
-                      onPressed: () => _zoom(1.5),
-                      icon: Icon(Icons.add, color: theme.text),
-                    ),
-                    IconButton(
-                      tooltip: _labels.zoomOut,
-                      onPressed: () => _zoom(1 / 1.5),
-                      icon: Icon(Icons.remove, color: theme.text),
-                    ),
-                  ],
+            if (widget.showZoomControls)
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: Material(
+                  color: theme.territory,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Flex(
+                    direction: landscape ? Axis.horizontal : Axis.vertical,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: _labels.zoomIn,
+                        onPressed: () => _zoom(1.5),
+                        icon: Icon(Icons.add, color: theme.text),
+                      ),
+                      IconButton(
+                        tooltip: _labels.zoomOut,
+                        onPressed: () => _zoom(1 / 1.5),
+                        icon: Icon(Icons.remove, color: theme.text),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       );

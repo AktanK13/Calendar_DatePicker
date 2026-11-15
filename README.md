@@ -49,7 +49,7 @@ Add the package to your app:
 dependencies:
   flutter:
     sdk: flutter
-  calendar_date_picker: ^0.1.2
+  calendar_date_picker: ^0.2.0
 ```
 
 ```sh
@@ -203,7 +203,7 @@ theme: const CalendarMapTheme(
 ),
 ```
 
-Today is outlined, the selected day is filled, and a small dot identifies today when it is also selected. Ensure your custom palette has adequate contrast for text and selection states.
+Today is outlined and the selected day is filled. A selected day does not receive an additional focus border. Ensure your custom palette has adequate contrast for both states.
 
 ### Using a Cupertino app
 
@@ -238,7 +238,7 @@ firstDayOfWeek: DateTime.sunday,
 
 Defaults are Russian and Monday. `ru` uses Russian built-in labels; other language codes currently fall back to English. The first weekday is independent of locale.
 
-The embedded widget accepts `labels: CalendarMapLabels(...)` with **12 month names** and **7 weekday names**, ordered Monday through Sunday, plus `today`, `zoomIn`, `zoomOut`, `hint`, and `map`. The dialog helper currently exposes `locale` but **does not expose custom labels** or confirmation-button text customization. Full `intl` formatting and RTL are not implemented.
+The embedded widget accepts `labels: CalendarMapLabels(...)` with **12 month names** and **7 weekday names**, ordered Monday through Sunday, plus `today`, `zoomIn`, `zoomOut`, `hint`, and `map`. The dialog helper supports `title`, `confirmText`, and `cancelText`. Full `intl` formatting and RTL are not implemented.
 
 ## Animation and accessibility
 
@@ -248,9 +248,11 @@ The embedded widget exposes:
 animationDuration: const Duration(milliseconds: 260),
 animationCurve: const Cubic(.23, 1, .32, 1),
 snapOnPinchEnd: true,
+showZoomHint: true,
+showZoomControls: true,
 ```
 
-New input interrupts a transition at its actual displayed camera position. `snapOnPinchEnd: false` disables automatic post-gesture settling; button/tap navigation still uses defined levels. The dialog helper currently uses the defaults and does not forward these customization parameters.
+The initial month performs one subtle 8% zoom-out and return to explain pinch navigation. It lasts 260 ms in total, is skipped for reduced motion, and stops immediately when the user touches the map. Set `showZoomHint: false` to disable it. New input also interrupts ordinary camera transitions at their displayed position. `snapOnPinchEnd: false` disables automatic post-gesture settling; button/tap navigation still uses defined levels.
 
 `MediaQuery.disableAnimations` makes programmatic camera changes immediate. Keyboard navigation is also immediate. Visible years, months, dates, and controls expose semantic labels/actions; a full screen-reader audit is still pending.
 
@@ -289,11 +291,11 @@ flutter devices
 flutter run -d <ios-simulator-id>
 ```
 
-The example has a Cupertino host screen, light/dark/system appearance, and a button opening the map dialog. It demonstrates returning the confirmed date to the host.
+The Cupertino example demonstrates a regular dialog, custom “Yes / No” actions without +/− controls, immediate selection in a bottom sheet, and a two-step date range built from two map selections.
 
 ## Limitations
 
-- Finite range; no infinite loading, multiple/range selection, events, time selection or non-Gregorian calendars.
+- Finite range; no infinite loading, native multi/range highlighting, events, time selection or non-Gregorian calendars. The example composes a range from two constrained selections.
 - No momentum/inertial scrolling.
 - Very small embedding areas may make dates hard to read; provide sufficient space.
 - No automatic midnight refresh without another frame; the layout-year anchor is fixed for the app run.

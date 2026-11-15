@@ -23,8 +23,14 @@ Returns `Future<DateTime?>`. A confirmed date is local date-only; dismissal retu
 | `locale` | `Locale` | `Locale('ru')` | Russian or English fallback labels |
 | `firstDayOfWeek` | `int` | `DateTime.monday` | `1…7`, Monday…Sunday |
 | `theme` | `CalendarMapTheme?` | `null` | Explicit palette or inherited Material brightness |
+| `title` | `String?` | Localized | Dialog heading |
+| `confirmText` / `cancelText` | `String?` | Localized | Custom action labels |
+| `showConfirmButton` / `showCancelButton` | `bool` | `true` | Include either action |
+| `selectImmediately` | `bool` | `false` | Return as soon as an enabled day is tapped |
+| `showZoomControls` | `bool` | `true` | Include the +/− controls; gestures remain active |
+| `showZoomHint` | `bool` | `true` | Play the initial explanatory zoom gesture |
 
-The helper validates arguments before pushing the route. The route uses the root navigator and a dismissible barrier. The current API does not expose route settings, a custom builder, barrier behavior, labels, animation settings, or a controller. Use the embedded widget in your own presentation when those controls are needed.
+The helper validates arguments before pushing the route. The route uses a dismissible barrier. It does not expose route settings, a custom builder, barrier behavior, custom month/day labels, animation timing, or a controller. Use the embedded widget in a bottom sheet or custom route when those controls are needed.
 
 ## `CalendarMapDatePicker`
 
@@ -43,10 +49,12 @@ A stateful embedded map with an immediate `onDateSelected` callback. It requires
 | `labels` | `CalendarMapLabels?` | `null` | Overrides built-in labels |
 | `firstDayOfWeek` | `int` | `1` | Monday…Sunday = `1…7` |
 | `snapOnPinchEnd` | `bool` | `true` | Automatic settling after scale/pan gestures |
+| `showZoomControls` | `bool` | `true` | Show +/− controls; pinch remains active when hidden |
+| `showZoomHint` | `bool` | `true` | Initial 8% zoom-out/return explanation |
 | `animationDuration` | `Duration` | `260 ms` | Programmatic camera-settling duration |
 | `animationCurve` | `Curve` | `Cubic(.23, 1, .32, 1)` | Settling interpolation curve |
 
-Use a non-negative duration and a curve suitable for interpolation between 0 and 1. Reduced motion and keyboard commands override animated movement. A callback may repeat the same date if tapped again.
+Use a non-negative duration and a curve suitable for interpolation between 0 and 1. The zoom hint uses 110 ms out and 150 ms back, is skipped for reduced motion, and is interrupted by input. Reduced motion and keyboard commands also override animated movement. A callback may repeat the same date if tapped again.
 
 ### Validation and updates
 

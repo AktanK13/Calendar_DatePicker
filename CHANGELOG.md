@@ -1,3 +1,11 @@
+## 0.2.0
+
+- Remove the focus border from the selected day.
+- Add an optional introductory zoom gesture hint with reduced-motion support.
+- Allow hiding the +/− zoom controls.
+- Add custom dialog title/action labels, optional action buttons, and immediate selection.
+- Expand the Cupertino example with confirmation, immediate bottom-sheet, and date-range flows.
+
 ## 0.1.2
 
 - Remove the extra dot shown below today when today is selected.

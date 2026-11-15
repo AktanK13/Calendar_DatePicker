@@ -28,6 +28,14 @@ Future<DateTime?> showCalendarMapDatePicker({
   Locale locale = const Locale('ru'),
   int firstDayOfWeek = DateTime.monday,
   CalendarMapTheme? theme,
+  String? title,
+  String? confirmText,
+  String? cancelText,
+  bool showConfirmButton = true,
+  bool showCancelButton = true,
+  bool selectImmediately = false,
+  bool showZoomControls = true,
+  bool showZoomHint = true,
 }) {
   // Validate before opening the route, using the same API as the embedded map.
   CalendarMapDatePicker(
@@ -50,6 +58,14 @@ Future<DateTime?> showCalendarMapDatePicker({
       locale: locale,
       firstDayOfWeek: firstDayOfWeek,
       theme: theme,
+      title: title,
+      confirmText: confirmText,
+      cancelText: cancelText,
+      showConfirmButton: showConfirmButton,
+      showCancelButton: showCancelButton,
+      selectImmediately: selectImmediately,
+      showZoomControls: showZoomControls,
+      showZoomHint: showZoomHint,
     ),
   );
 }
@@ -64,12 +80,23 @@ class _CalendarDialog extends StatefulWidget {
     required this.locale,
     required this.firstDayOfWeek,
     required this.theme,
+    required this.title,
+    required this.confirmText,
+    required this.cancelText,
+    required this.showConfirmButton,
+    required this.showCancelButton,
+    required this.selectImmediately,
+    required this.showZoomControls,
+    required this.showZoomHint,
   });
   final DateTime initialDate;
   final int firstYear, lastYear, firstDayOfWeek;
   final DateTime? minDate, maxDate;
   final Locale locale;
   final CalendarMapTheme? theme;
+  final String? title, confirmText, cancelText;
+  final bool showConfirmButton, showCancelButton, selectImmediately;
+  final bool showZoomControls, showZoomHint;
   @override
   State<_CalendarDialog> createState() => _CalendarDialogState();
 }
@@ -97,7 +124,7 @@ class _CalendarDialogState extends State<_CalendarDialog> {
     final cancel = TextButton(
       key: const ValueKey('cancel-date'),
       onPressed: () => Navigator.of(context).pop(),
-      child: Text(ru ? 'Отмена' : 'Cancel'),
+      child: Text(widget.cancelText ?? (ru ? 'Отмена' : 'Cancel')),
     );
     final confirm = FilledButton(
       key: const ValueKey('confirm-date'),
@@ -106,10 +133,10 @@ class _CalendarDialogState extends State<_CalendarDialog> {
         foregroundColor: colors.onAccent,
       ),
       onPressed: () => Navigator.of(context).pop(_selected),
-      child: Text(ru ? 'Выбрать' : 'Select'),
+      child: Text(widget.confirmText ?? (ru ? 'Выбрать' : 'Select')),
     );
     final title = Text(
-      ru ? 'Выбор даты' : 'Choose date',
+      widget.title ?? (ru ? 'Выбор даты' : 'Choose date'),
       style: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
@@ -126,7 +153,15 @@ class _CalendarDialogState extends State<_CalendarDialog> {
       locale: widget.locale,
       firstDayOfWeek: widget.firstDayOfWeek,
       theme: widget.theme,
-      onDateSelected: (date) => setState(() => _selected = date),
+      showZoomControls: widget.showZoomControls,
+      showZoomHint: widget.showZoomHint,
+      onDateSelected: (date) {
+        if (widget.selectImmediately) {
+          Navigator.of(context).pop(date);
+        } else {
+          setState(() => _selected = date);
+        }
+      },
     );
     return Dialog(
       backgroundColor: colors.background,
@@ -150,9 +185,10 @@ class _CalendarDialogState extends State<_CalendarDialog> {
                       children: [
                         title,
                         const Spacer(),
-                        cancel,
-                        const SizedBox(height: 8),
-                        confirm,
+                        if (widget.showCancelButton) cancel,
+                        if (widget.showCancelButton && widget.showConfirmButton)
+                          const SizedBox(height: 8),
+                        if (widget.showConfirmButton) confirm,
                       ],
                     ),
                   ),
@@ -167,13 +203,19 @@ class _CalendarDialogState extends State<_CalendarDialog> {
                 child: title,
               ),
               Expanded(child: calendar),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [cancel, const SizedBox(width: 12), confirm],
+              if (widget.showCancelButton || widget.showConfirmButton)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (widget.showCancelButton) cancel,
+                      if (widget.showCancelButton && widget.showConfirmButton)
+                        const SizedBox(width: 12),
+                      if (widget.showConfirmButton) confirm,
+                    ],
+                  ),
                 ),
-              ),
             ],
           );
         },

@@ -179,7 +179,7 @@ class CalendarMapPainter extends CustomPainter {
                   ..strokeWidth = 1.5,
               );
             }
-            if (current && CalendarDates.same(d, focused)) {
+            if (current && !chosen && CalendarDates.same(d, focused)) {
               canvas.drawRRect(
                 RRect.fromRectAndRadius(
                   cell.deflate(1),
