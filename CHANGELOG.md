@@ -1,4 +1,4 @@
-## 0.2.0
+## 0.3.0
 
 - Add first-class single-date and date-range APIs, including guided and calendar-only range flows.
 - Add `CalendarMapController`, viewport callbacks, controlled selection, and state restoration.

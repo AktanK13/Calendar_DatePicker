@@ -49,7 +49,7 @@ Add the package to your app:
 dependencies:
   flutter:
     sdk: flutter
-  calendar_date_picker: ^0.2.0
+  calendar_date_picker: ^0.3.0
 ```
 
 ```sh
