@@ -14,23 +14,38 @@ Returns `Future<DateTime?>`. A confirmed date is local date-only; dismissal retu
 
 | Parameter | Type | Default / requirement | Meaning |
 | --- | --- | --- | --- |
-| `context` | `BuildContext` | Required | Descendant of a Navigator with Material localizations |
+| `context` | `BuildContext` | Required | Descendant of a Navigator and app localizations |
 | `initialDate` | `DateTime` | Required | Initial selected date/month; year must be in range |
 | `firstYear` | `int` | `2000` | First rendered year, inclusive |
 | `lastYear` | `int` | `2050` | Last rendered year, inclusive |
 | `minDate` | `DateTime?` | `null` | Earliest selectable civil date |
 | `maxDate` | `DateTime?` | `null` | Latest selectable civil date |
-| `locale` | `Locale` | `Locale('ru')` | Russian or English fallback labels |
-| `firstDayOfWeek` | `int` | `DateTime.monday` | `1…7`, Monday…Sunday |
-| `theme` | `CalendarMapTheme?` | `null` | Explicit palette or inherited Material brightness |
+| `selectableDayPredicate` | `CalendarSelectableDayPredicate?` | `null` | Arbitrary per-day availability rule |
+| `currentDate` | `DateTime?` | System date | Day highlighted as today |
+| `rangeStart` / `rangeEnd` | `DateTime?` | `null` | Optional visual range; endpoints and intermediate days use distinct styles |
+| `locale` | `Locale?` | Ambient | Locale used by labels and date formatting |
+| `firstDayOfWeek` | `int?` | Monday | `1…7`, Monday…Sunday |
+| `textDirection` | `TextDirection?` | Ambient | LTR/RTL override |
+| `controller` | `CalendarMapController?` | `null` | Programmatic camera/selection commands |
+| `theme` | `CalendarMapTheme?` | `null` | Explicit palette or platform brightness |
+| `labels` | `CalendarMapLabels?` | `null` | Custom map and semantic labels |
 | `title` | `String?` | Localized | Dialog heading |
 | `confirmText` / `cancelText` | `String?` | Localized | Custom action labels |
 | `showConfirmButton` / `showCancelButton` | `bool` | `true` | Include either action |
 | `selectImmediately` | `bool` | `false` | Return as soon as an enabled day is tapped |
 | `showZoomControls` | `bool` | `true` | Include the +/− controls; gestures remain active |
 | `showZoomHint` | `bool` | `true` | Play the initial explanatory zoom gesture |
+| `zoomHintDuration` | `Duration` | `520 ms` | Total duration of the explanatory movement |
+| `zoomHintScale` | `double` | `.86` | Furthest hint scale; lower values make it more obvious |
+| `allowTextInput` | `bool` | `false` | Add calendar/text-entry switching |
+| `restorationId` | `String?` | `null` | Restore map selection/navigation below a RestorationScope |
+| `barrierDismissible`, `barrierColor`, `barrierLabel` | Route options | Flutter defaults | Modal barrier behavior |
+| `useRootNavigator`, `routeSettings`, `anchorPoint`, `useSafeArea`, `builder` | Route options | Flutter defaults | Dialog routing/presentation customization |
+| `presentation` | `CalendarPickerPresentation` | `dialog` | iOS-style dialog, Cupertino bottom sheet, or fullscreen route |
 
-The helper validates arguments before pushing the route. The route uses a dismissible barrier. It does not expose route settings, a custom builder, barrier behavior, custom month/day labels, animation timing, or a controller. Use the embedded widget in a bottom sheet or custom route when those controls are needed.
+The helper validates arguments before pushing the route. Input-specific error, hint, and label strings can be overridden. Use the embedded widget in a bottom sheet or custom route when camera-settling animation timing must also be customized.
+
+`restorationId` restores widget state while the route exists below a `RestorationScope`. Like Flutter's standard `showDatePicker`, this convenience function does not itself make the route restorable after process death; place the embedded picker in a route pushed with `Navigator.restorablePush` when route restoration is required.
 
 ## `CalendarMapDatePicker`
 
@@ -44,23 +59,49 @@ A stateful embedded map with an immediate `onDateSelected` callback. It requires
 | `firstYear` | `int` | `2000` | First world year |
 | `lastYear` | `int` | `2050` | Last world year |
 | `minDate` / `maxDate` | `DateTime?` | `null` | Inclusive selection limits |
-| `theme` | `CalendarMapTheme?` | `null` | Explicit palette or Material brightness |
-| `locale` | `Locale` | `Locale('ru')` | Built-in label language |
+| `selectableDayPredicate` | `CalendarSelectableDayPredicate?` | `null` | Arbitrary per-day availability rule |
+| `selectedDate` | `DateTime?` | `null` | Parent-controlled selection update |
+| `selectInitialDate` | `bool` | `true` | Paint initialDate as selected before interaction |
+| `currentDate` | `DateTime?` | System date | Today override; system mode refreshes after midnight |
+| `rangeStart` / `rangeEnd` | `DateTime?` | `null` | Optional visual range; endpoints and intermediate days use distinct styles |
+| `controller` | `CalendarMapController?` | `null` | Programmatic commands and observable viewport |
+| `onViewportChanged` | `ValueChanged<CalendarMapViewport>?` | `null` | Visible-map callback |
+| `onDisplayedPeriodChanged` | `ValueChanged<DateTime>?` | `null` | Center-month callback |
+| `theme` | `CalendarMapTheme?` | `null` | Explicit palette or platform brightness |
+| `locale` | `Locale?` | Ambient | Built-in label language/date formatting |
 | `labels` | `CalendarMapLabels?` | `null` | Overrides built-in labels |
-| `firstDayOfWeek` | `int` | `1` | Monday…Sunday = `1…7` |
-| `snapOnPinchEnd` | `bool` | `true` | Automatic settling after scale/pan gestures |
+| `firstDayOfWeek` | `int?` | Monday | Monday…Sunday = `1…7` |
+| `textDirection` | `TextDirection?` | Ambient | Mirrors calendar placement and hit-testing in RTL |
+| `snapOnPinchEnd` | `bool` | `true` | Automatic settling; a 24 px drag or light flick advances to an adjacent month |
 | `showZoomControls` | `bool` | `true` | Show +/− controls; pinch remains active when hidden |
 | `showZoomHint` | `bool` | `true` | Initial 8% zoom-out/return explanation |
+| `zoomHintDuration` | `Duration` | `520 ms` | Total duration of the explanatory movement |
+| `zoomHintScale` | `double` | `.86` | Furthest hint scale; lower values make it more obvious |
 | `animationDuration` | `Duration` | `260 ms` | Programmatic camera-settling duration |
 | `animationCurve` | `Curve` | `Cubic(.23, 1, .32, 1)` | Settling interpolation curve |
+| `enableHapticFeedback` | `bool` | `true` | Selection and zoom-level haptics |
+| `autofocus` | `bool` | `true` | Initial keyboard focus |
+| `restorationId` | `String?` | `null` | Restore selection and navigation state |
 
-Use a non-negative duration and a curve suitable for interpolation between 0 and 1. The zoom hint uses 110 ms out and 150 ms back, is skipped for reduced motion, and is interrupted by input. Reduced motion and keyboard commands also override animated movement. A callback may repeat the same date if tapped again.
+Use non-negative durations and a curve suitable for interpolation between 0 and 1. `zoomHintScale` must be above 0 and below 1. The zoom hint spends 45% of `zoomHintDuration` moving out and 55% returning, is skipped for reduced motion, and is interrupted by input. A zero duration disables the hint. Reduced motion and keyboard commands also override animated movement. A callback may repeat the same date if tapped again.
 
 ### Validation and updates
 
 `1 <= firstYear <= lastYear <= 9999`. The initial year must belong to that interval. Min/max must be ordered and intersect the interval. Only the date fields are compared. Custom lists must contain exactly 12 months and 7 weekdays.
 
 An initial date outside selection bounds is clamped. Later `initialDate` updates are ignored by existing state. Invalidating the selected date through changed bounds clears it silently. Changing year bounds refocuses the camera; normal parent rebuilds do not.
+
+## Range API
+
+`CalendarMapDateRangePicker` owns partial and completed range state. `initialRange` seeds it once. `onRangeChanged(null)` means that only the start is currently known; a second tap returns a complete `DateTimeRange<DateTime>`. `onRangeStartChanged` and `onRangeCompleted` are convenience callbacks. `CalendarRangePickerStyle.calendarOnly` has no separate endpoint controls; `guided` adds editable start/end stages.
+
+`showCalendarMapDateRangePicker` returns `Future<DateTimeRange<DateTime>?>` and supports initial range, date limits, predicate, current date, both styles, localization/theme settings, and standard dialog route options.
+
+## `CalendarMapController` and viewport
+
+Attach one controller to one live picker. Commands: `showDate`, `showYear`, `showOverview`, `showToday`, `zoomIn`, `zoomOut`, and `selectDate`. Calling a command without an attached picker throws `StateError`.
+
+The controller is a `ChangeNotifier`. Its `selectedDate` and optional `viewport` update after the widget changes. `CalendarMapViewport` contains `level`, `centerDate`, `visibleWorld`, `visibleYears`, and the current two-dimensional `scale`. Levels are `overview`, `year`, and `month`.
 
 ## `CalendarMapTheme`
 
@@ -76,7 +117,7 @@ Immutable palette. `CalendarMapTheme.dark` and `.light` are predefined constants
 | `accent` | `#FF454A` | `#CB263A` |
 | `onAccent` | `#FFFFFF` | `#FFFFFF` |
 
-`forBrightness(Brightness)` returns the corresponding built-in palette. There is no `copyWith` yet; construct a palette to override colors. The map theme is not a `ThemeExtension`.
+`copyWith` and `forBrightness(Brightness)` are provided. Additional state colors cover selected days, range endpoints/middle, today, disabled/weekend days, focus, hover, and press. `yearRadius`, `monthRadius`, and `dayRadius` customize geometry. The map theme is not a `ThemeExtension`.
 
 ## `CalendarMapLabels`
 
@@ -104,7 +145,7 @@ These helpers are available for custom integrations, but they are not external c
 
 ### `CalendarSelection`
 
-Constructor: `firstYear`, `lastYear`, optional `minDate` and `maxDate`. `enabled(date)` checks all bounds; `clamp(date)` returns the nearest allowed civil date. Use a valid intersecting interval; this low-level helper does not perform the widget constructor's argument validation itself.
+Constructor: `firstYear`, `lastYear`, optional `minDate`, `maxDate`, and `selectableDayPredicate`. `enabled(date)` checks all rules; `clamp(date)` applies contiguous bounds, `nearestEnabled(date)` also searches around predicate-disabled dates, and `move(date, delta)` performs keyboard-style movement while skipping unavailable dates.
 
 ### `CalendarGeometry`
 
@@ -138,4 +179,4 @@ A standalone `ChangeNotifier`; dispose it when done. It stores uniform XY scale 
 - Static `fitScale(area, viewport)`: scale to fit a rectangle, clamped to supported range.
 - Current scale limits: `minScale = .025`, `maxScale = 3.5`.
 
-The picker does not accept a CalendarCamera parameter. Creating one does not move a CalendarMapDatePicker instance.
+The picker does not accept a CalendarCamera parameter. Creating one does not move a CalendarMapDatePicker instance; use `CalendarMapController` for that.

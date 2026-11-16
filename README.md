@@ -28,7 +28,7 @@ Use it for a **single Gregorian date** when spatial navigation and touch gesture
 - Portrait/landscape layouts, keyboard navigation and visible-item semantics.
 - No runtime dependencies other than the Flutter SDK.
 
-It is **not** a time picker, date-range picker, infinite calendar, native UIKit control, or drop-in replacement for Flutter's constructor/API. The map is custom painted; its dialog and controls currently use Flutter Material internally. The example app uses Cupertino controls around the unchanged picker.
+It is **not** a time picker, infinite calendar, native UIKit control, or drop-in replacement for Flutter's constructor/API. It supports both single dates and first-class date ranges on the same custom-painted map. The supplied presentation uses Cupertino controls and custom-painted calendar content; it does not display Material UI.
 
 ## Requirements and platform status
 
@@ -66,10 +66,10 @@ import 'package:calendar_date_picker/calendar_date_picker.dart';
 
 ## Quick start: open from a button
 
-This complete screen is intended to be placed under a `MaterialApp`:
+This complete screen is intended to be placed under a `CupertinoApp`:
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:calendar_date_picker/calendar_date_picker.dart';
 
 class DateField extends StatefulWidget {
@@ -100,7 +100,10 @@ class _DateFieldState extends State<DateField> {
     children: [
       Text(_date == null ? 'No date selected' :
         '${_date!.year}-${_date!.month}-${_date!.day}'),
-      FilledButton(onPressed: _pickDate, child: const Text('Choose date')),
+      CupertinoButton.filled(
+        onPressed: _pickDate,
+        child: const Text('Choose date'),
+      ),
     ],
   );
 }
@@ -108,7 +111,7 @@ class _DateFieldState extends State<DateField> {
 
 Tapping a day changes the temporary selection **inside the dialog**. “Select” returns that date as `Future<DateTime?>`; cancel, back, or tapping the barrier returns `null`. The initial date is already selected, so confirmation without tapping another day returns that initial/clamped date. Save the result in your own state and pass it back on the next opening.
 
-Use a `BuildContext` below your app's `Navigator` and localizations. Passing the context that creates `MaterialApp` rather than a descendant context is a common integration mistake.
+Use a `BuildContext` below your app's `Navigator` and localizations. Passing the context that creates the app widget rather than a descendant context is a common integration mistake.
 
 ## Embedding the map
 
@@ -134,6 +137,20 @@ The parent must provide **finite width and height**. `Expanded` inside a bounded
 
 `onDateSelected` is immediate and may run again when the same date is tapped. It is not called merely because the widget initializes or a constraint changes. Date selection never automatically closes an embedded map.
 
+## Date ranges
+
+```dart
+final range = await showCalendarMapDateRangePicker(
+  context: context,
+  initialDateRange: previousRange,
+  firstYear: 2020,
+  lastYear: 2040,
+  style: CalendarRangePickerStyle.calendarOnly,
+);
+```
+
+`calendarOnly` uses two consecutive calendar taps. `guided` adds editable start/end stages. Embed `CalendarMapDateRangePicker` for custom presentation: `onRangeChanged` receives `null` while only the start is known and a complete `DateTimeRange<DateTime>` after the second tap; `onRangeCompleted` runs only for a complete range.
+
 ## Understanding the map
 
 1. Open at the month containing `initialDate` (after clamping to selection limits).
@@ -143,7 +160,7 @@ The parent must provide **finite width and height**. `Expanded` inside a bounded
 
 One completed pinch moves at most one camera level. Changes smaller than roughly 12% settle back to the same level. The camera follows the gesture before it settles. Releasing one finger does not start settling while the other is still down.
 
-At month level, panning is limited to the active year; releasing a swipe settles to the nearest month. At year level, the entire year fits, so panning cannot leave it. Overview panning explores the finite world and settles to a three-row window. The `+`/`−` buttons move between levels.
+At month level, panning is limited to the active year. A short 24 px directional drag or a light flick settles to the physically adjacent month in the 4×3 grid; a full-screen swipe is not required. Horizontal swipes move between columns and vertical swipes between rows. At year level, the entire year fits, so panning cannot leave it. Overview panning explores the finite world and settles to a three-row window. The `+`/`−` buttons move between levels.
 
 Years have three columns; months inside a year have four columns and three rows. Each month has a header, weekdays, and 42 day cells. Other-month dates are muted and not selectable in that tile.
 
@@ -168,10 +185,14 @@ The anchor does not relocate automatically at New Year during an existing app ru
 ```dart
 minDate: DateTime(2026, 1, 1),
 maxDate: DateTime(2026, 12, 31),
+selectableDayPredicate: (date) => date.weekday <= DateTime.friday,
+currentDate: DateTime(2026, 11, 16), // Optional server/business “today”.
 ```
 
 - Both limits are **inclusive** and compare year/month/day, ignoring time and the UTC flag.
 - `firstYear`/`lastYear` define the map; `minDate`/`maxDate` define selectable days. Disabled days stay visible.
+- `selectableDayPredicate` adds arbitrary rules such as weekends, holidays, inventory, or booked dates.
+- `currentDate` overrides the highlighted civil day; omit it to follow the system date with an automatic midnight refresh.
 - Calendar arithmetic uses UTC to avoid daylight-saving-hour shifts.
 - Returned selections are local `DateTime(year, month, day)` values without a time of day.
 - Dates are treated as civil dates. The picker does not convert an input instant to a different timezone before reading its fields.
@@ -182,7 +203,7 @@ Construction throws `ArgumentError` for an invalid year interval, an initial yea
 
 ## Light and dark themes
 
-With `theme: null` (the default), the picker uses the surrounding **Material** theme's brightness. You can also choose explicitly:
+With `theme: null` (the default), the picker uses `MediaQuery.platformBrightnessOf(context)`. You can also choose explicitly:
 
 ```dart
 theme: CalendarMapTheme.light,
@@ -203,31 +224,24 @@ theme: const CalendarMapTheme(
 ),
 ```
 
-Today is outlined and the selected day is filled. A selected day does not receive an additional focus border. Ensure your custom palette has adequate contrast for both states.
+The selected day is filled without a border. Today and keyboard focus use soft background fills rather than outlined circles. Ensure your custom palette has adequate contrast for these states.
 
 ### Using a Cupertino app
 
-The **host screen** can be entirely Cupertino, as in the bundled example. The picker still needs Material localizations for its existing dialog and controls. Provide those services and a matching inherited Material theme without replacing your Cupertino UI:
+The bundled dialog, bottom sheet, text field, buttons, and zoom controls use Cupertino/custom widgets. No inherited Material theme or Material-localizations bridge is required:
 
 ```dart
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' as material;
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 CupertinoApp(
-  localizationsDelegates: const [
-    material.DefaultMaterialLocalizations.delegate,
-  ],
-  builder: (context, child) => material.Theme(
-    data: material.ThemeData(
-      brightness: CupertinoTheme.of(context).brightness ?? Brightness.light,
-    ),
-    child: child!,
-  ),
+  localizationsDelegates: GlobalCupertinoLocalizations.delegates,
+  supportedLocales: const [Locale('en'), Locale('ru')],
   home: const YourCupertinoScreen(),
 )
 ```
 
-`YourCupertinoScreen` is your app's widget. For automatic system-mode changes and matching accent colors, follow [example/lib/main.dart](https://github.com/AktanK13/Calendar_DatePicker/blob/main/example/lib/main.dart). This bridge does not make the picker a native UIKit dialog.
+`YourCupertinoScreen` is your app's widget. For automatic system-mode changes and matching accent colors, follow [example/lib/main.dart](https://github.com/AktanK13/Calendar_DatePicker/blob/main/example/lib/main.dart). The presentation follows iOS styling but remains a Flutter widget rather than a native UIKit control.
 
 ## Locale and first weekday
 
@@ -236,9 +250,9 @@ locale: const Locale('en'),
 firstDayOfWeek: DateTime.sunday,
 ```
 
-Defaults are Russian and Monday. `ru` uses Russian built-in labels; other language codes currently fall back to English. The first weekday is independent of locale.
+With both values omitted, the picker follows the ambient locale and text direction, while the week starts on Monday. Russian and English map labels and date formatting are built in; custom labels support other languages. Explicit `locale`, `textDirection`, and `firstDayOfWeek` values override these defaults.
 
-The embedded widget accepts `labels: CalendarMapLabels(...)` with **12 month names** and **7 weekday names**, ordered Monday through Sunday, plus `today`, `zoomIn`, `zoomOut`, `hint`, and `map`. The dialog helper supports `title`, `confirmText`, and `cancelText`. Full `intl` formatting and RTL are not implemented.
+The embedded widget accepts `labels: CalendarMapLabels(...)` with **12 month names** and **7 weekday names**, ordered Monday through Sunday, plus control and semantic labels. RTL mirrors weekday/day placement and hit-testing. Multilingual apps should install Flutter's normal `flutter_localizations` delegates.
 
 ## Animation and accessibility
 
@@ -249,12 +263,14 @@ animationDuration: const Duration(milliseconds: 260),
 animationCurve: const Cubic(.23, 1, .32, 1),
 snapOnPinchEnd: true,
 showZoomHint: true,
+zoomHintDuration: const Duration(milliseconds: 520),
+zoomHintScale: .86,
 showZoomControls: true,
 ```
 
-The initial month performs one subtle 8% zoom-out and return to explain pinch navigation. It lasts 260 ms in total, is skipped for reduced motion, and stops immediately when the user touches the map. Set `showZoomHint: false` to disable it. New input also interrupts ordinary camera transitions at their displayed position. `snapOnPinchEnd: false` disables automatic post-gesture settling; button/tap navigation still uses defined levels.
+The initial month performs a 14% zoom-out and return to explain pinch navigation. It lasts 520 ms by default, is skipped for reduced motion, and stops immediately when the user touches the map. Customize `zoomHintDuration` and `zoomHintScale`, or set `showZoomHint: false` to disable it. New input also interrupts ordinary camera transitions at their displayed position. `snapOnPinchEnd: false` disables automatic post-gesture settling; button/tap navigation still uses defined levels.
 
-`MediaQuery.disableAnimations` makes programmatic camera changes immediate. Keyboard navigation is also immediate. Visible years, months, dates, and controls expose semantic labels/actions; a full screen-reader audit is still pending.
+`MediaQuery.disableAnimations` makes programmatic camera changes immediate. Keyboard navigation is also immediate. Visible years, months, dates, disabled states, range endpoints, and controls expose semantic labels/actions. `enableHapticFeedback` controls selection/zoom haptics; `autofocus` controls initial keyboard focus. A physical-device screen-reader audit is still recommended.
 
 | Input | Action |
 | --- | --- |
@@ -269,16 +285,41 @@ The initial month performs one subtle 8% zoom-out and return to explain pinch na
 
 Mouse wheel events do not trigger pinch settling. Trackpad behavior depends on whether the platform reports native pan/zoom events or ordinary wheel events.
 
+The `+` control returns to the current civil year from the nine-year overview, then to the current month. The `−` control moves outward from month to year to the nine-year overview.
+The nine-year overview is the furthest allowed zoom level. Pinch, wheel, keyboard, and the `−` control cannot zoom beyond its 3×3 boundary.
+
 ## State, rebuilding, and rotation
 
 - `initialDate` seeds state once; changing it on an existing state does not control selection or reset the camera.
+- `selectedDate` provides parent-driven selection updates.
+- `CalendarMapController` provides navigation/selection commands and exposes the latest `CalendarMapViewport`.
+- `onViewportChanged` reports level, center date, visible world/years, and scale; `onDisplayedPeriodChanged` reports center-month changes.
+- `restorationId` restores selection, focused date, visible year/month, zoom level, and range progress below a `RestorationScope`.
 - Rebuilding after a callback is safe. To reset completely, supply a new `Key`.
 - Changing min/max clears an invalid existing selection without emitting a callback.
 - Changing the year range rebuilds the navigation reference and focuses a valid month.
 - Resizing preserves the selected date and level, then refits that level's target square; it does not preserve arbitrary intermediate pan offsets.
 - Landscape moves controls beside the canvas. Orientation is not locked.
 
-There is no external selection/camera controller on `CalendarMapDatePicker` yet. Exported geometry/camera utility classes are not attached to the widget's private camera automatically.
+The standalone exported `CalendarCamera` remains separate from a picker. Use `CalendarMapController`, not a manually created camera, to control a widget instance.
+
+```dart
+final controller = CalendarMapController();
+
+CalendarMapDatePicker(
+  initialDate: DateTime.now(),
+  onDateSelected: (date) {},
+  controller: controller,
+  onViewportChanged: (viewport) {
+    debugPrint('${viewport.level}: ${viewport.visibleYears}');
+  },
+);
+
+controller.showToday();
+controller.showOverview(centerYear: 2026);
+```
+
+The dialog helper also supports optional typed input (`allowTextInput`), arbitrary disabled dates, controller/current-date overrides, standard route options, and `CalendarPickerPresentation.dialog`, `.bottomSheet`, or `.fullscreen`.
 
 ## API and example
 
@@ -291,14 +332,14 @@ flutter devices
 flutter run -d <ios-simulator-id>
 ```
 
-The Cupertino example demonstrates a regular dialog, custom “Yes / No” actions without +/− controls, immediate selection in a bottom sheet, and a two-step date range built from two map selections.
+The Cupertino example demonstrates a regular dialog, custom “Yes / No” actions without +/− controls, immediate selection in a bottom sheet, a guided two-step range, and a calendar-only range without separate start/end controls. Range layouts reserve their action and instruction space so the visible month does not resize as selection state changes.
 
 ## Limitations
 
-- Finite range; no infinite loading, native multi/range highlighting, events, time selection or non-Gregorian calendars. The example composes a range from two constrained selections.
+- Finite range; no infinite loading, event model, time selection, or non-Gregorian calendars.
 - No momentum/inertial scrolling.
 - Very small embedding areas may make dates hard to read; provide sufficient space.
-- No automatic midnight refresh without another frame; the layout-year anchor is fixed for the app run.
+- The highlighted current date refreshes after midnight; the layout-year anchor remains fixed for the app run to prevent coordinate jumps.
 - No guarantee of stable 60/120 FPS from debug-simulator measurements. Profile on target hardware.
 - No completed physical-device or full VoiceOver/TalkBack validation.
 

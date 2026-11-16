@@ -1,10 +1,16 @@
 ## 0.2.0
 
-- Remove the focus border from the selected day.
-- Add an optional introductory zoom gesture hint with reduced-motion support.
-- Allow hiding the +/− zoom controls.
-- Add custom dialog title/action labels, optional action buttons, and immediate selection.
-- Expand the Cupertino example with confirmation, immediate bottom-sheet, and date-range flows.
+- Add first-class single-date and date-range APIs, including guided and calendar-only range flows.
+- Add `CalendarMapController`, viewport callbacks, controlled selection, and state restoration.
+- Add arbitrary selectable-day predicates, current-date overrides, RTL, localization, and automatic midnight refresh.
+- Add Cupertino dialog, bottom-sheet, fullscreen, action, zoom-control, and typed-input presentation without visible Material UI.
+- Add configurable camera and introductory zoom animations with reduced-motion support.
+- Make short 24 px drags and light flicks snap to adjacent months in the physical 4×3 map grid.
+- Keep the nine-year overview as the furthest zoom level and preserve bounded camera navigation.
+- Add separate theme colors for selected days, today, ranges, disabled days, focus, hover, and press states.
+- Remove borders and dots from selected days; use soft fills for today and keyboard focus.
+- Improve semantics, keyboard navigation, haptics, hover/press feedback, and visible-item rendering.
+- Expand the adaptive Cupertino example and the English/Russian user documentation.
 
 ## 0.1.2
 

@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/semantics.dart';
 import 'calendar_camera.dart';
 import 'calendar_dates.dart';
@@ -15,6 +15,10 @@ class CalendarMapPainter extends CustomPainter {
     required this.firstYear,
     required this.lastYear,
     required this.selected,
+    required this.rangeStart,
+    required this.rangeEnd,
+    required this.hovered,
+    required this.pressed,
     required this.focused,
     required this.today,
     required this.dates,
@@ -22,6 +26,8 @@ class CalendarMapPainter extends CustomPainter {
     required this.theme,
     required this.labels,
     required this.firstDayOfWeek,
+    required this.textDirection,
+    required this.dateLabel,
     required this.onDate,
     required this.onArea,
   });
@@ -30,11 +36,15 @@ class CalendarMapPainter extends CustomPainter {
   final Size viewport;
   final int firstYear, lastYear, firstDayOfWeek;
   final DateTime? selected;
+  final DateTime? rangeStart, rangeEnd;
+  final DateTime? hovered, pressed;
   final DateTime focused, today;
   final CalendarDates dates;
   final CalendarSelection selection;
   final CalendarMapTheme theme;
   final CalendarMapLabels labels;
+  final TextDirection textDirection;
+  final String Function(DateTime) dateLabel;
   final ValueChanged<DateTime> onDate;
   final ValueChanged<Rect> onArea;
   static const readableScale = .85;
@@ -93,7 +103,7 @@ class CalendarMapPainter extends CustomPainter {
           fontWeight: FontWeight.w500,
         ),
       ),
-      textDirection: TextDirection.ltr,
+      textDirection: textDirection,
     )..layout();
     p.paint(canvas, center ? at - Offset(p.width / 2, p.height / 2) : at);
     p.dispose();
@@ -113,7 +123,7 @@ class CalendarMapPainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           const Rect.fromLTWH(0, 0, 1200, 1200),
-          const Radius.circular(24),
+          Radius.circular(theme.yearRadius),
         ),
         Paint()..color = theme.territory,
       );
@@ -133,7 +143,7 @@ class CalendarMapPainter extends CustomPainter {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             const Rect.fromLTWH(0, 0, 280, 280),
-            const Radius.circular(12),
+            Radius.circular(theme.monthRadius),
           ),
           Paint()
             ..color = theme.background.withValues(alpha: monthOpacity * .45),
@@ -151,7 +161,10 @@ class CalendarMapPainter extends CustomPainter {
             text(
               canvas,
               labels.weekdays[(firstDayOfWeek - 1 + i) % 7],
-              Offset(30 + i * 36, 57),
+              Offset(
+                30 + (textDirection == TextDirection.rtl ? 6 - i : i) * 36,
+                57,
+              ),
               11,
               theme.secondary,
               opacity: dayOpacity,
@@ -163,32 +176,92 @@ class CalendarMapPainter extends CustomPainter {
             month,
             firstDayOfWeek: firstDayOfWeek,
           );
+          final rangeStartKey = rangeStart == null
+              ? null
+              : CalendarDates.key(rangeStart!);
+          final rangeEndKey = rangeEnd == null
+              ? null
+              : CalendarDates.key(rangeEnd!);
           for (var i = 0; i < 42; i++) {
             final d = days[i];
-            final cell = CalendarGeometry.dayRect(i);
+            final row = i ~/ 7;
+            final column = i % 7;
+            final visualColumn = textDirection == TextDirection.rtl
+                ? 6 - column
+                : column;
+            final cell = CalendarGeometry.dayRect(row * 7 + visualColumn);
             final current = d.month == month;
-            final chosen = selected != null && CalendarDates.same(d, selected!);
+            final dateKey = CalendarDates.key(d);
+            final inRange =
+                rangeStartKey != null &&
+                rangeEndKey != null &&
+                dateKey >= rangeStartKey &&
+                dateKey <= rangeEndKey;
+            final rangeEndpoint =
+                rangeStart != null && CalendarDates.same(d, rangeStart!) ||
+                rangeEnd != null && CalendarDates.same(d, rangeEnd!);
+            final chosen =
+                selected != null &&
+                    CalendarDates.same(d, selected!) &&
+                    (!inRange || rangeEndpoint) ||
+                rangeEndpoint;
             final now = CalendarDates.same(d, today);
-            if (current && (chosen || now)) {
+            final isHovered =
+                hovered != null && CalendarDates.same(d, hovered!);
+            final isPressed =
+                pressed != null && CalendarDates.same(d, pressed!);
+            if (current && inRange && !rangeEndpoint) {
+              canvas.drawRRect(
+                RRect.fromRectAndRadius(
+                  cell.deflate(3),
+                  Radius.circular(theme.dayRadius),
+                ),
+                Paint()
+                  ..color = theme.rangeMiddle.withValues(
+                    alpha: dayOpacity * .18,
+                  ),
+              );
+            }
+            if (current && (isHovered || isPressed) && !chosen) {
+              canvas.drawRRect(
+                RRect.fromRectAndRadius(
+                  cell.deflate(2),
+                  Radius.circular(theme.dayRadius),
+                ),
+                Paint()
+                  ..color = (isPressed ? theme.pressed : theme.hover)
+                      .withValues(alpha: dayOpacity * (isPressed ? .18 : .10)),
+              );
+            }
+            if (current && chosen) {
               canvas.drawCircle(
                 cell.center,
                 13,
                 Paint()
-                  ..color = theme.accent.withValues(alpha: dayOpacity)
-                  ..style = chosen ? PaintingStyle.fill : PaintingStyle.stroke
-                  ..strokeWidth = 1.5,
+                  ..color =
+                      (rangeEndpoint ? theme.rangeEndpoint : theme.selectedDay)
+                          .withValues(alpha: dayOpacity)
+                  ..style = PaintingStyle.fill,
+              );
+            }
+            if (current && now && !chosen) {
+              canvas.drawCircle(
+                cell.center,
+                13,
+                Paint()
+                  ..color = theme.today.withValues(alpha: dayOpacity * .14)
+                  ..style = PaintingStyle.fill,
               );
             }
             if (current && !chosen && CalendarDates.same(d, focused)) {
               canvas.drawRRect(
                 RRect.fromRectAndRadius(
                   cell.deflate(1),
-                  const Radius.circular(5),
+                  Radius.circular(theme.dayRadius),
                 ),
                 Paint()
-                  ..color = theme.secondary.withValues(alpha: dayOpacity * .65)
-                  ..style = PaintingStyle.stroke
-                  ..strokeWidth = .8,
+                  ..color = theme.focus.withValues(alpha: dayOpacity * .10)
+                  ..style = PaintingStyle.fill,
               );
             }
             text(
@@ -197,8 +270,14 @@ class CalendarMapPainter extends CustomPainter {
               cell.center,
               13,
               current && selection.enabled(d)
-                  ? (chosen ? theme.onAccent : theme.text)
-                  : theme.muted,
+                  ? (chosen
+                        ? theme.onAccent
+                        : inRange
+                        ? theme.rangeMiddle
+                        : d.weekday >= DateTime.saturday
+                        ? theme.weekend
+                        : theme.text)
+                  : theme.disabledDay,
               opacity: dayOpacity,
               center: true,
             );
@@ -222,14 +301,16 @@ class CalendarMapPainter extends CustomPainter {
     for (final year in visibleYears) {
       final yr = CalendarGeometry.yearRect(year, firstYear);
       if (level == CalendarLevel.overview) {
+        final semanticsRect = screenRect(yr).intersect(Offset.zero & size);
+        if (semanticsRect.isEmpty) continue;
         nodes.add(
           CustomPainterSemantics(
             key: ValueKey('year-$year'),
-            rect: screenRect(yr).intersect(Offset.zero & size),
+            rect: semanticsRect,
             properties: SemanticsProperties(
               label: '$year',
               button: true,
-              textDirection: TextDirection.ltr,
+              textDirection: textDirection,
               onTap: () => onArea(yr),
             ),
           ),
@@ -241,14 +322,16 @@ class CalendarMapPainter extends CustomPainter {
         if (!mr.overlaps(visible)) continue;
         if (level == CalendarLevel.year ||
             camera.scale < effectiveReadableScale) {
+          final semanticsRect = screenRect(mr).intersect(Offset.zero & size);
+          if (semanticsRect.isEmpty) continue;
           nodes.add(
             CustomPainterSemantics(
               key: ValueKey('$year-$m'),
-              rect: screenRect(mr).intersect(Offset.zero & size),
+              rect: semanticsRect,
               properties: SemanticsProperties(
                 label: '${labels.months[m - 1]} $year',
                 button: true,
-                textDirection: TextDirection.ltr,
+                textDirection: textDirection,
                 onTap: () => onArea(mr),
               ),
             ),
@@ -258,19 +341,45 @@ class CalendarMapPainter extends CustomPainter {
         final days = dates.monthDays(year, m, firstDayOfWeek: firstDayOfWeek);
         for (var i = 0; i < 42; i++) {
           final date = days[i];
-          final r = CalendarGeometry.dayRect(i).shift(mr.topLeft);
+          final row = i ~/ 7;
+          final column = i % 7;
+          final visualColumn = textDirection == TextDirection.rtl
+              ? 6 - column
+              : column;
+          final r = CalendarGeometry.dayRect(
+            row * 7 + visualColumn,
+          ).shift(mr.topLeft);
           if (date.month != m || !r.overlaps(visible)) continue;
           final enabled = selection.enabled(date);
+          final semanticsRect = screenRect(r).intersect(Offset.zero & size);
+          if (semanticsRect.isEmpty) continue;
           nodes.add(
             CustomPainterSemantics(
               key: ValueKey(CalendarDates.key(date)),
-              rect: screenRect(r).intersect(Offset.zero & size),
+              rect: semanticsRect,
               properties: SemanticsProperties(
-                label: labels.date(date),
-                textDirection: TextDirection.ltr,
+                label: [
+                  dateLabel(date),
+                  if (!enabled) labels.unavailable,
+                  if (rangeStart != null &&
+                      CalendarDates.same(date, rangeStart!))
+                    labels.rangeStart
+                  else if (rangeEnd != null &&
+                      CalendarDates.same(date, rangeEnd!))
+                    labels.rangeEnd
+                  else if (selected != null &&
+                      CalendarDates.same(date, selected!))
+                    labels.selected,
+                ].join(', '),
+                textDirection: textDirection,
                 button: true,
                 selected:
-                    selected != null && CalendarDates.same(date, selected!),
+                    selected != null && CalendarDates.same(date, selected!) ||
+                    rangeStart != null &&
+                        rangeEnd != null &&
+                        CalendarDates.key(date) >=
+                            CalendarDates.key(rangeStart!) &&
+                        CalendarDates.key(date) <= CalendarDates.key(rangeEnd!),
                 enabled: enabled,
                 onTap: enabled ? () => onDate(date) : null,
               ),

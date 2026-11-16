@@ -1,8 +1,7 @@
 import 'package:calendar_date_picker/calendar_date_picker.dart';
 import 'package:flutter/cupertino.dart';
-// Compatibility services required by the picker; the example UI is Cupertino.
-import 'package:flutter/material.dart' as material
-    show ColorScheme, DefaultMaterialLocalizations, Theme, ThemeData;
+import 'package:flutter/material.dart' as material show DateTimeRange;
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() => runApp(const CalendarExample());
 
@@ -27,6 +26,7 @@ class _CalendarExampleState extends State<CalendarExample> {
   DateTime? _confirmed;
   DateTime? _instant;
   _PickedRange? _range;
+  _PickedRange? _calendarOnlyRange;
 
   String _date(DateTime? value) => value == null
       ? 'Не выбрано'
@@ -38,20 +38,29 @@ class _CalendarExampleState extends State<CalendarExample> {
       initialDate: _confirmed ?? DateTime.now(),
       firstYear: 1900,
       lastYear: 2100,
+      allowTextInput: true,
+      restorationId: 'standard_calendar_map',
     );
     if (mounted && value != null) setState(() => _confirmed = value);
   }
 
   Future<void> _openYesNo(BuildContext context) async {
+    var initial = _confirmed ?? DateTime.now();
+    while (initial.weekday == DateTime.saturday ||
+        initial.weekday == DateTime.sunday) {
+      initial = DateTime(initial.year, initial.month, initial.day + 1);
+    }
     final value = await showCalendarMapDatePicker(
       context: context,
-      initialDate: _confirmed ?? DateTime.now(),
+      initialDate: initial,
       firstYear: 1900,
       lastYear: 2100,
       title: 'Подтвердить дату?',
       confirmText: 'Да',
       cancelText: 'Нет',
       showZoomControls: false,
+      selectableDayPredicate: (date) =>
+          date.weekday != DateTime.saturday && date.weekday != DateTime.sunday,
     );
     if (mounted && value != null) setState(() => _confirmed = value);
   }
@@ -70,9 +79,21 @@ class _CalendarExampleState extends State<CalendarExample> {
   Future<void> _openRangeSheet(BuildContext context) async {
     final value = await showCupertinoModalPopup<_PickedRange>(
       context: context,
-      builder: (_) => const _RangePickerSheet(),
+      builder: (_) => _RangePickerSheet(initialRange: _range),
     );
     if (mounted && value != null) setState(() => _range = value);
+  }
+
+  Future<void> _openCalendarOnlyRangeSheet(BuildContext context) async {
+    final value = await showCupertinoModalPopup<_PickedRange>(
+      context: context,
+      builder: (_) => _CalendarOnlyRangeSheet(
+        initialRange: _calendarOnlyRange,
+      ),
+    );
+    if (mounted && value != null) {
+      setState(() => _calendarOnlyRange = value);
+    }
   }
 
   @override
@@ -85,25 +106,14 @@ class _CalendarExampleState extends State<CalendarExample> {
     final dark = brightness == Brightness.dark;
     return CupertinoApp(
       debugShowCheckedModeBanner: false,
+      locale: const Locale('ru'),
+      supportedLocales: const [Locale('ru'), Locale('en')],
       theme: CupertinoThemeData(
         brightness: brightness,
         primaryColor: dark ? _accent : const Color(0xFFCB263A),
         scaffoldBackgroundColor: CupertinoColors.systemGroupedBackground,
       ),
-      localizationsDelegates: const [
-        material.DefaultMaterialLocalizations.delegate,
-      ],
-      builder: (context, child) => material.Theme(
-        data: material.ThemeData(
-          brightness: brightness,
-          useMaterial3: true,
-          colorScheme: material.ColorScheme.fromSeed(
-            seedColor: dark ? _accent : const Color(0xFFCB263A),
-            brightness: brightness,
-          ),
-        ),
-        child: child!,
-      ),
+      localizationsDelegates: GlobalCupertinoLocalizations.delegates,
       home: Builder(
         builder: (context) => CupertinoPageScaffold(
           child: CustomScrollView(
@@ -134,7 +144,7 @@ class _CalendarExampleState extends State<CalendarExample> {
                         icon: CupertinoIcons.hand_thumbsup,
                         title: '«Да / Нет» без + / −',
                         description:
-                            'Свои подписи действий; масштаб меняется жестом.',
+                            'Свои подписи действий; выходные недоступны для выбора.',
                         value: _date(_confirmed),
                         button: 'Показать вариант',
                         onPressed: () => _openYesNo(context),
@@ -160,6 +170,18 @@ class _CalendarExampleState extends State<CalendarExample> {
                             : '${_date(_range!.start)} — ${_date(_range!.end)}',
                         button: 'Выбрать диапазон',
                         onPressed: () => _openRangeSheet(context),
+                      ),
+                      const SizedBox(height: 14),
+                      _ExampleCard(
+                        icon: CupertinoIcons.calendar,
+                        title: 'Диапазон — только календарь',
+                        description:
+                            'Без кнопок «Начало» и «Конец»: два последовательных тапа по датам.',
+                        value: _calendarOnlyRange == null
+                            ? 'Не выбрано'
+                            : '${_date(_calendarOnlyRange!.start)} — ${_date(_calendarOnlyRange!.end)}',
+                        button: 'Открыть календарь',
+                        onPressed: () => _openCalendarOnlyRangeSheet(context),
                       ),
                       const SizedBox(height: 28),
                       Text(
@@ -339,7 +361,9 @@ class _ImmediatePickerSheet extends StatelessWidget {
 }
 
 class _RangePickerSheet extends StatefulWidget {
-  const _RangePickerSheet();
+  const _RangePickerSheet({this.initialRange});
+
+  final _PickedRange? initialRange;
 
   @override
   State<_RangePickerSheet> createState() => _RangePickerSheetState();
@@ -347,41 +371,324 @@ class _RangePickerSheet extends StatefulWidget {
 
 class _RangePickerSheetState extends State<_RangePickerSheet> {
   DateTime? _start;
+  DateTime? _end;
+  int _step = 0;
+
+  String _shortDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+
+  @override
+  void initState() {
+    super.initState();
+    _start = widget.initialRange?.start;
+    _end = widget.initialRange?.end;
+    if (_start != null && _end != null) _step = -1;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final initial = _start ?? DateTime.now();
+    final initial = _step == 0
+        ? (_start ?? DateTime.now())
+        : (_end ?? _start ?? DateTime.now());
     return _SheetFrame(
       child: Column(
         children: [
           const _SheetHandle(),
-          Text(
-            _start == null
-                ? 'Выберите начало диапазона'
-                : 'Начало: ${_start!.day}.${_start!.month}.${_start!.year} · выберите конец',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+          const Text(
+            'Диапазон дат',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
+                child: Text(
+                  _step == 0
+                      ? 'Шаг 1 из 2 · Нажмите первый день'
+                      : _step == 1
+                          ? 'Шаг 2 из 2 · Теперь нажмите последний день'
+                          : 'Диапазон сохранён · нажмите любой день, чтобы выбрать новый',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _RangeStep(
+                    number: '1',
+                    label: 'Начало',
+                    value:
+                        _start == null ? 'Выберите дату' : _shortDate(_start!),
+                    active: _step == 0,
+                    complete: _start != null,
+                    onPressed: () => setState(() => _step = 0),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(CupertinoIcons.chevron_right, size: 18),
+                ),
+                Expanded(
+                  child: _RangeStep(
+                    number: '2',
+                    label: 'Конец',
+                    value: _end != null
+                        ? _shortDate(_end!)
+                        : _start == null
+                            ? 'После начала'
+                            : 'Выберите дату',
+                    active: _step == 1,
+                    complete: _end != null,
+                    onPressed:
+                        _start == null ? null : () => setState(() => _step = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: CalendarMapDatePicker(
-              key: ValueKey(_start),
+              key: ValueKey('$_step-$_start-$_end'),
               initialDate: initial,
               firstYear: 1900,
               lastYear: 2100,
-              minDate: _start,
+              minDate: _step == 1 ? _start : null,
+              rangeStart: _start,
+              rangeEnd: _end,
               showZoomControls: false,
               showZoomHint: _start == null,
               onDateSelected: (date) {
-                if (_start == null) {
-                  setState(() => _start = date);
+                if (_step == -1 || _step == 0) {
+                  setState(() {
+                    _start = date;
+                    _end = null;
+                    _step = 1;
+                  });
                 } else {
-                  Navigator.of(context).pop(_PickedRange(_start!, date));
+                  setState(() {
+                    _end = date;
+                    _step = -1;
+                  });
                 }
               },
             ),
           ),
+          Visibility(
+            visible: _start != null && _end != null,
+            maintainAnimation: true,
+            maintainSize: true,
+            maintainState: true,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoButton.filled(
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).pop(_PickedRange(_start!, _end!)),
+                  borderRadius: BorderRadius.circular(14),
+                  child: const Text('Подтвердить диапазон'),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _CalendarOnlyRangeSheet extends StatefulWidget {
+  const _CalendarOnlyRangeSheet({this.initialRange});
+
+  final _PickedRange? initialRange;
+
+  @override
+  State<_CalendarOnlyRangeSheet> createState() =>
+      _CalendarOnlyRangeSheetState();
+}
+
+class _CalendarOnlyRangeSheetState extends State<_CalendarOnlyRangeSheet> {
+  material.DateTimeRange<DateTime>? _range;
+  var _selectingEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialRange;
+    if (initial != null) {
+      _range = material.DateTimeRange<DateTime>(
+        start: initial.start,
+        end: initial.end,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = _range != null;
+    final instruction = _selectingEnd
+        ? 'Теперь нажмите последний день'
+        : complete
+            ? 'Нажмите любой день, чтобы выбрать новый диапазон'
+            : 'Нажмите первый день диапазона';
+    return _SheetFrame(
+      child: Column(
+        children: [
+          const _SheetHandle(),
+          SizedBox(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
+                child: Text(
+                  instruction,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: CalendarMapDateRangePicker(
+              initialRange: _range,
+              firstYear: 1900,
+              lastYear: 2100,
+              style: CalendarRangePickerStyle.calendarOnly,
+              showZoomControls: false,
+              onRangeStartChanged: (_) => setState(() => _selectingEnd = true),
+              onRangeChanged: (range) => setState(() {
+                _range = range;
+                _selectingEnd = range == null;
+              }),
+            ),
+          ),
+          Visibility(
+            visible: complete,
+            maintainAnimation: true,
+            maintainSize: true,
+            maintainState: true,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoButton.filled(
+                  onPressed: complete
+                      ? () => Navigator.of(context).pop(
+                            _PickedRange(_range!.start, _range!.end),
+                          )
+                      : null,
+                  borderRadius: BorderRadius.circular(14),
+                  child: const Text('Подтвердить диапазон'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RangeStep extends StatelessWidget {
+  const _RangeStep({
+    required this.number,
+    required this.label,
+    required this.value,
+    required this.active,
+    required this.complete,
+    required this.onPressed,
+  });
+
+  final String number, label, value;
+  final bool active, complete;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = CupertinoTheme.of(context).primaryColor;
+    final border = active || complete
+        ? accent
+        : CupertinoColors.separator.resolveFrom(context);
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: const Cubic(.23, 1, .32, 1),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: active
+              ? accent.withValues(alpha: .09)
+              : CupertinoColors.secondarySystemBackground.resolveFrom(context),
+          border: Border.all(color: border, width: active ? 1.5 : 1),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 25,
+              height: 25,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: complete || active ? accent : border,
+                shape: BoxShape.circle,
+              ),
+              child: complete
+                  ? const Icon(
+                      CupertinoIcons.check_mark,
+                      size: 15,
+                      color: CupertinoColors.white,
+                    )
+                  : Text(
+                      number,
+                      style: const TextStyle(
+                        color: CupertinoColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color:
+                          CupertinoColors.secondaryLabel.resolveFrom(context),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
